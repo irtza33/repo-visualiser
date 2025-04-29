@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Database Relationship Visualizer</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Database Relationship Visualizer</h1>
+      </header>
+
+      <div class="main-content">
+        <div class="connection-panel">
+          <h2>Database Connection</h2>
+          <form id="connection-form">
+            <div class="form-group">
+              <label for="dialect">Database Type:</label>
+              <select id="dialect" name="dialect" required>
+                <option value="" disabled selected>Select database type</option>
+                {% for dialect in dialects %}
+                <option
+                  value="{{ dialect.id }}"
+                  data-default-port="{{ dialect.default_port }}"
+                >
+                  {{ dialect.name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="host">Host:</label>
+              <input
+                type="text"
+                id="host"
+                name="host"
+                placeholder="localhost"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="port">Port:</label>
+              <input
+                type="text"
+                id="port"
+                name="port"
+                placeholder="Default port"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="username">Username:</label>
+              <input type="text" id="username" name="username" required />
+            </div>
+
+            <div class="form-group">
+              <label for="password">Password:</label>
+              <input type="password" id="password" name="password" />
+            </div>
+
+            <div class="form-group">
+              <label for="database">Database Name:</label>
+              <input type="text" id="database" name="database" required />
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" id="connect-button">
+                Connect & Visualize
+              </button>
+            </div>
+          </form>
+          <div id="connection-status" class="status"></div>
+        </div>
+
+        <div class="visualization-panel" id="visualization-panel">
+          <div id="diagram-container">
+            <!-- D3.js visualization will be rendered here -->
+          </div>
+          <div id="relationship-info">
+            <h3>Relationship Details</h3>
+            <p class="info-text">Select a relationship to view details</p>
+            <div id="detail-content"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+        <p>Connecting to database...</p>
+      </div>
+
+      <footer>
+        <p>Database Relationship Visualizer &copy; 2025</p>
+      </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="{{ url_for('static', filename='js/visualizer.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  </body>
+</html>
