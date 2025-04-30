@@ -60,9 +60,20 @@ document.addEventListener('DOMContentLoaded', function() {
             // Hide loading overlay
             loadingOverlay.classList.add('hidden');
             
-            // Show success message
-            connectionStatus.textContent = 'Connection successful! Visualizing database schema...';
-            connectionStatus.className = 'status success';
+            // Check if we have relationships
+            if (data.relationships && data.relationships.length === 0) {
+                connectionStatus.textContent = 'Connection successful! No relationships detected in this database.';
+                connectionStatus.className = 'status success';
+            } else {
+                // Log data for debugging
+                console.log('Database schema data:', data);
+                console.log('Tables:', data.tables.length);
+                console.log('Relationships:', data.relationships.length);
+                
+                // Show success message
+                connectionStatus.textContent = `Connection successful! Found ${data.tables.length} tables and ${data.relationships.length} relationships.`;
+                connectionStatus.className = 'status success';
+            }
             
             // Render the visualization
             if (window.visualizer) {

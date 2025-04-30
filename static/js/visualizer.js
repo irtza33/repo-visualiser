@@ -45,6 +45,57 @@ class DatabaseVisualizer {
         
         // Define arrow markers for different relationship types
         this.defineMarkers(defs);
+        
+        // Create the relationship legend
+        this.createLegend();
+    }
+    
+    /**
+     * Create a legend explaining the relationship line styles
+     */
+    createLegend() {
+        // Remove any existing legend
+        let existingLegend = document.querySelector('.relationship-legend');
+        if (existingLegend) {
+            existingLegend.remove();
+        }
+        
+        // Create legend container
+        const legend = document.createElement('div');
+        legend.className = 'relationship-legend';
+        
+        // Add legend title
+        const title = document.createElement('div');
+        title.className = 'legend-title';
+        title.textContent = 'Relationship Types';
+        legend.appendChild(title);
+        
+        // Define legend items
+        const legendItems = [
+            { type: 'one-to-one', text: 'One-to-One (1:1)', style: 'dashed' },
+            { type: 'one-to-many', text: 'One-to-Many (1:M)', style: 'solid' },
+            { type: 'many-to-many', text: 'Many-to-Many (M:M)', style: 'solid' }
+        ];
+        
+        // Create legend items
+        legendItems.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'legend-item';
+            
+            const line = document.createElement('div');
+            line.className = `legend-line ${item.type}`;
+            
+            const text = document.createElement('div');
+            text.className = 'legend-text';
+            text.textContent = item.text;
+            
+            itemDiv.appendChild(line);
+            itemDiv.appendChild(text);
+            legend.appendChild(itemDiv);
+        });
+        
+        // Add legend to container
+        this.container.appendChild(legend);
     }
     
     /**
@@ -55,7 +106,7 @@ class DatabaseVisualizer {
         defs.append('marker')
             .attr('id', 'arrow')
             .attr('viewBox', '0 -5 10 10')
-            .attr('refX', 15)
+            .attr('refX', 20)
             .attr('refY', 0)
             .attr('markerWidth', 6)
             .attr('markerHeight', 6)
@@ -68,7 +119,7 @@ class DatabaseVisualizer {
         defs.append('marker')
             .attr('id', 'one-to-one')
             .attr('viewBox', '0 -5 10 10')
-            .attr('refX', 15)
+            .attr('refX', 20)
             .attr('refY', 0)
             .attr('markerWidth', 6)
             .attr('markerHeight', 6)
@@ -81,7 +132,7 @@ class DatabaseVisualizer {
         defs.append('marker')
             .attr('id', 'one-to-many')
             .attr('viewBox', '0 -5 10 10')
-            .attr('refX', 15)
+            .attr('refX', 20)
             .attr('refY', 0)
             .attr('markerWidth', 6)
             .attr('markerHeight', 6)
@@ -94,7 +145,7 @@ class DatabaseVisualizer {
         defs.append('marker')
             .attr('id', 'many-to-many')
             .attr('viewBox', '0 -5 10 10')
-            .attr('refX', 15)
+            .attr('refX', 20)
             .attr('refY', 0)
             .attr('markerWidth', 6)
             .attr('markerHeight', 6)
@@ -108,6 +159,8 @@ class DatabaseVisualizer {
      * Process database schema data for visualization
      */
     processData(data) {
+        console.log("Processing data:", data);
+        
         // Store the raw data
         this.data = data;
         
@@ -123,18 +176,39 @@ class DatabaseVisualizer {
             };
         });
         
+        console.log("Nodes created:", nodes.length);
+        
         // Process relationships into links
-        const links = data.relationships.map((rel, index) => {
-            return {
-                id: `link-${index}`,
-                source: rel.source_table,
-                target: rel.target_table,
-                sourceColumns: rel.source_columns,
-                targetColumns: rel.target_columns,
-                type: rel.type,
-                name: rel.name
-            };
-        });
+        const links = [];
+        
+        // Make sure relationships exist and it's an array
+        if (data.relationships && Array.isArray(data.relationships)) {
+            data.relationships.forEach((rel, index) => {
+                // Only create links for valid relationships
+                if (rel.source_table && rel.target_table) {
+                    // Check if the source and target tables exist
+                    const sourceExists = nodes.some(n => n.id === rel.source_table);
+                    const targetExists = nodes.some(n => n.id === rel.target_table);
+                    
+                    if (sourceExists && targetExists) {
+                        links.push({
+                            id: index,
+                            source: rel.source_table,
+                            target: rel.target_table,
+                            sourceColumns: rel.source_columns || [],
+                            targetColumns: rel.target_columns || [],
+                            type: rel.type || 'unknown',
+                            name: rel.name || `Link ${index}`
+                        });
+                    } else {
+                        console.warn(`Skipping relationship: missing tables ${rel.source_table} -> ${rel.target_table}`);
+                    }
+                }
+            });
+        }
+        
+        console.log("Links created:", links.length);
+        console.log("Links detail:", links);
         
         return { nodes, links };
     }
@@ -149,6 +223,12 @@ class DatabaseVisualizer {
         // Clear existing visualization
         this.initialize();
         
+        // If there's no data, return early
+        if (nodes.length === 0) {
+            this.showNoDataMessage();
+            return;
+        }
+        
         // Create a zoom behavior
         const zoom = d3.zoom()
             .scaleExtent([0.1, 3])
@@ -161,15 +241,21 @@ class DatabaseVisualizer {
         
         // Create a container for the visualization elements
         const container = this.svg.append('g');
+
+        // Add the container to the SVG and initially zoom out to see everything
+        this.svg.call(zoom).call(
+            zoom.transform, 
+            d3.zoomIdentity.translate(this.width / 4, this.height / 4).scale(0.5)
+        );
         
         // Create a force simulation
         this.simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links).id(d => d.id).distance(200))
-            .force('charge', d3.forceManyBody().strength(-1000))
+            .force('link', d3.forceLink(links).id(d => d.id).distance(300))
+            .force('charge', d3.forceManyBody().strength(-3000))
             .force('center', d3.forceCenter(this.width / 2, this.height / 2))
-            .force('collision', d3.forceCollide().radius(100));
+            .force('collision', d3.forceCollide().radius(140));
             
-        // Create links
+        // Create links with more visibility
         const link = container.append('g')
             .attr('class', 'links')
             .selectAll('path')
@@ -178,6 +264,9 @@ class DatabaseVisualizer {
             .append('path')
             .attr('class', d => `link ${this.getRelationshipClass(d.type)}`)
             .attr('id', d => `link-${d.id}`)
+            .attr('stroke-width', 2.5)
+            .attr('fill', 'none')
+            .attr('stroke', d => this.getRelationshipColor(d.type))
             .attr('marker-end', d => `url(#${this.getRelationshipMarker(d.type)})`)
             .on('click', (event, d) => this.showRelationshipDetails(d));
             
@@ -194,25 +283,31 @@ class DatabaseVisualizer {
                 .on('drag', this.dragged.bind(this))
                 .on('end', this.dragended.bind(this)));
                 
-        // Create table rectangles
+        // Create table rectangles with a white fill and blue border
         node.append('rect')
-            .attr('width', 160)
-            .attr('height', d => 30 + d.columns.length * 22)
+            .attr('width', 200)
+            .attr('height', d => 30 + d.columns.length * 24)
             .attr('rx', 5)
-            .attr('ry', 5);
+            .attr('ry', 5)
+            .attr('fill', 'white')
+            .attr('stroke', '#3498db')
+            .attr('stroke-width', 2);
             
         // Create table name text
         node.append('text')
-            .attr('x', 80)
+            .attr('x', 100)
             .attr('y', 20)
             .attr('class', 'table-name')
-            .text(d => d.label);
+            .attr('text-anchor', 'middle')
+            .attr('font-weight', 'bold')
+            .attr('font-size', '14px')
+            .text(d => this.truncateText(d.label, 20));
             
         // Create horizontal line separator
         node.append('line')
             .attr('x1', 0)
             .attr('y1', 30)
-            .attr('x2', 160)
+            .attr('x2', 200)
             .attr('y2', 30)
             .attr('stroke', '#3498db')
             .attr('stroke-width', 1);
@@ -230,11 +325,11 @@ class DatabaseVisualizer {
             .enter()
             .append('g')
             .attr('class', 'column')
-            .attr('transform', (d, i) => `translate(5, ${40 + i * 22})`);
+            .attr('transform', (d, i) => `translate(5, ${40 + i * 24})`);
             
         // Create column background
         columnGroups.append('rect')
-            .attr('width', 150)
+            .attr('width', 190)
             .attr('height', 20)
             .attr('rx', 3)
             .attr('ry', 3)
@@ -249,54 +344,111 @@ class DatabaseVisualizer {
                 return 'transparent';
             });
             
-        // Create column name text
+        // Create column name text - ensure it's not too long
         columnGroups.append('text')
             .attr('x', 5)
             .attr('y', 15)
             .attr('class', 'column-name')
+            .attr('font-size', '12px')
             .text(d => {
                 let prefix = '';
                 if (d.primary_key) prefix = '🔑 ';
                 else if (d.foreign_key) prefix = '🔗 ';
-                return `${prefix}${d.name}`;
+                return prefix + this.truncateText(d.name, 12);
             });
             
-        // Create column type text
+        // Create column type text - ensure it's not too long and positioned correctly
         columnGroups.append('text')
-            .attr('x', 145)
+            .attr('x', 185)
             .attr('y', 15)
             .attr('text-anchor', 'end')
             .attr('class', 'column-type')
-            .text(d => this.formatColumnType(d.type));
+            .attr('font-size', '12px')
+            .attr('fill', '#777')
+            .text(d => this.truncateText(this.formatColumnType(d.type), 8));
             
         // Update positions on each tick of the simulation
         this.simulation.on('tick', () => {
+            // Update link paths with improved drawing
             link.attr('d', d => {
-                const sourceNode = nodes.find(n => n.id === d.source.id);
-                const targetNode = nodes.find(n => n.id === d.target.id);
+                // Ensure source and target exist
+                if (!d.source || !d.target) return '';
+                
+                // Handle both string IDs and object references
+                const sourceNode = typeof d.source === 'object' ? d.source : nodes.find(n => n.id === d.source);
+                const targetNode = typeof d.target === 'object' ? d.target : nodes.find(n => n.id === d.target);
                 
                 if (!sourceNode || !targetNode) return '';
                 
                 // Calculate the total height of each node based on column count
-                const sourceHeight = 30 + sourceNode.columns.length * 22;
-                const targetHeight = 30 + targetNode.columns.length * 22;
+                const sourceHeight = 30 + (sourceNode.columns ? sourceNode.columns.length * 24 : 0);
+                const targetHeight = 30 + (targetNode.columns ? targetNode.columns.length * 24 : 0);
                 
                 // Calculate source and target points
-                const sourceX = sourceNode.x + 80; // middle of the node
+                const sourceX = sourceNode.x + 100; // middle of the node
                 const sourceY = sourceNode.y + sourceHeight / 2;
-                const targetX = targetNode.x + 80; // middle of the node
+                const targetX = targetNode.x + 100; // middle of the node
                 const targetY = targetNode.y + targetHeight / 2;
                 
-                // Calculate control points for curved path
+                // Calculate control points for curved path with increased curve
                 const dx = targetX - sourceX;
                 const dy = targetY - sourceY;
-                const dr = Math.sqrt(dx * dx + dy * dy);
+                const dr = Math.sqrt(dx * dx + dy * dy) * 1.2;
                 
                 return `M${sourceX},${sourceY}A${dr},${dr} 0 0,1 ${targetX},${targetY}`;
             });
             
-            node.attr('transform', d => `translate(${d.x - 80},${d.y - 15})`);
+            // Update node positions
+            node.attr('transform', d => `translate(${d.x - 100},${d.y - 15})`);
         });
+
+        // Run simulation for a few iterations to settle the layout
+        this.simulation.alpha(1).restart();
+        for (let i = 0; i < 50; ++i) this.simulation.tick();
+    }
+
+    /**
+     * Truncate text if it's too long
+     */
+    truncateText(text, maxLength) {
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength - 2) + '...';
+    }
+    
+    /**
+     * Get color for relationship type
+     */
+    getRelationshipColor(type) {
+        switch (type) {
+            case '1:1': return '#3498db'; // blue
+            case '1:M': return '#e67e22'; // orange
+            case 'M:1': return '#9b59b6'; // purple
+            case 'M:M': return '#2ecc71'; // green
+            default: return '#95a5a6';    // gray
+        }
+    }
+    
+    /**
+     * Show a message when no data is available
+     */
+    showNoDataMessage() {
+        const messageGroup = this.svg.append('g')
+            .attr('class', 'no-data-message')
+            .attr('transform', `translate(${this.width/2}, ${this.height/2})`);
+            
+        messageGroup.append('text')
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '20px')
+            .attr('fill', '#95a5a6')
+            .text('No database schema data available');
+            
+        messageGroup.append('text')
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '16px')
+            .attr('fill', '#95a5a6')
+            .attr('y', 30)
+            .text('Please connect to a database to visualize relationships');
     }
     
     /**
@@ -316,7 +468,7 @@ class DatabaseVisualizer {
      */
     isColumnForeignKey(links, tableName, columnName) {
         return links.some(link => 
-            link.source === tableName && 
+            (link.source === tableName || link.source.id === tableName) && 
             link.sourceColumns.includes(columnName)
         );
     }
