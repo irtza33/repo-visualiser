@@ -1,1 +1,63 @@
+# macOS system files
 .DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# Python virtual environments
+.venv
+venv/
+ENV/
+env/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Environment variables
+.env
+.flaskenv
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+.spyderproject
+.spyproject
+.ropeproject
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Local development settings
+instance/
+.webassets-cache
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# JavaScript/Node (if you use npm/yarn for frontend dependencies)
+node_modules/
+package-lock.json
+yarn.lock
